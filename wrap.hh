@@ -48,10 +48,10 @@ inline auto init()
 ///
 /// Must only be used on main thread.
 class window {
-protected:
   decltype(init()) sys_ = init();
-  GLFWwindow* cwin;
 public:
+  GLFWwindow* glfw_window;
+
   window(const int w, const int h,
          const std::string &title) noexcept {
     // TODO: Again – error handling
@@ -59,26 +59,30 @@ public:
     glfwWindowHint(GLFW_VISIBLE,   true);
     glfwWindowHint(GLFW_FOCUSED,   true);
     glfwWindowHint(GLFW_MAXIMIZED, true);
-    cwin = glfwCreateWindow(w, h, title.c_str(),
+    glfw_window = glfwCreateWindow(w, h, title.c_str(),
                             nullptr, nullptr);
-
-    glfwMakeContextCurrent(cwin);
   }
 
   window(const std::string &title="")
       : window{640, 480, title} {}
 
   ~window() {
-    glfwDestroyWindow(cwin);
+    glfwDestroyWindow(glfw_window);
+  }
+
+  void make_gl_context() {
+    glfwMakeContextCurrent(glfw_window);
   }
 
   void swap_buffers() {
-    glfwSwapBuffers(cwin);
+    glfwSwapBuffers(glfw_window);
   }
 
   bool should_close() {
-    return glfwWindowShouldClose(cwin);
+    return glfwWindowShouldClose(glfw_window);
   }
 };
+
+////////// RENDERING //////////////////////////
 
 } // ns gassist::glfw

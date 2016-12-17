@@ -1,9 +1,10 @@
 CXXFLAGS += -Wall -Wextra -Wpedantic -Wshadow \
-            -O3 -std=c++1z -flto
-LDFLAGS += -flto
+            -O3 -std=c++1z -flto -pthread
+LDFLAGS += -flto -pthread
 
 CXXFLAGS += \
-	-I"$(PWD)/vendor/phoenix_ptr/include"
+	-I"$(PWD)/vendor/phoenix_ptr/include" \
+	-I"$(PWD)/vendor/thread_pool/include"
 
 pkgs = glfw3 epoxy
 

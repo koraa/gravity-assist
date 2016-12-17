@@ -1,3 +1,6 @@
 [submodule "vendor/phoenix_ptr"]
 	path = vendor/phoenix_ptr
 	url = https://github.com/SoftwearDevelopment/phoenix_ptr
+[submodule "vendor/thread_pool"]
+	path = vendor/thread_pool
+	url = https://github.com/SoftwearDevelopment/thread_pool
