@@ -2,8 +2,6 @@
 /// glfw or libepoxy
 
 #include <epoxy/gl.h>
-#include <epoxy/glx.h>
-
 #include <GLFW/glfw3.h>
 
 #include <softwear/phoenix_ptr.hpp>

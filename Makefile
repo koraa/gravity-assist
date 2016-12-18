@@ -1,10 +1,15 @@
+CXX_STANDARD=14
 CXXFLAGS += -Wall -Wextra -Wpedantic -Wshadow \
-            -O3 -std=c++1z -flto -pthread
+            -O3 -std=c++$(CXX_STANDARD) -flto -pthread
 LDFLAGS += -flto -pthread
 
 CXXFLAGS += \
 	-I"$(PWD)/vendor/phoenix_ptr/include" \
-	-I"$(PWD)/vendor/thread_pool/include"
+	-I"$(PWD)/vendor/thread_pool/include" \
+	-I"$(PWD)/deps/include"
+
+CXXFLAGS += \
+	-DOGLPLUS_LOW_PROFILE=1
 
 pkgs = glfw3 epoxy
 
@@ -18,8 +23,28 @@ $(exe): $(objects)
 	$(CXX) $(LDFLAGS) $(libs) $(objects) -o $(exe)
 
 gassist.o wrap.o: wrap.hh
+gassist.o: deps/include/oglplus/
 
-.PHONY: clean
+.PHONY: clean clean-deps
 
 clean:
 	rm -fv $(objects) $(exe)
+
+clean-deps:
+	rm -fvr deps/
+
+deps/include/oglplus/:
+	mkdir -p deps/build/oglplus
+	cd deps/build/oglplus; cmake "$(PWD)/vendor/oglplus" \
+		-DOGLPLUS_NO_EXAMPLES=On \
+		-DOGLPLUS_NO_SCREENSHOTS=On \
+		-DOGLPLUS_NO_DOCS=On \
+		-DOGLPLUS_WITH_TESTS=Off \
+		-DOGLPLUS_LOW_PROFILE=On \
+		-DCMAKE_CXX_STANDARD="$(CXX_STANDARD)" \
+		-DCMAKE_CXX_COMPILER="$(CXX)" \
+		-DCMAKE_CXX_FLAGS="$(CXXFLAGS) $(CPPFLAGS) $(SUBPROJECT_FLAGS)" \
+		-DCMAKE_C_COMPILER="$(CC)" \
+		-DCMAKE_C_FLAGS="$(CFLAGS) $(CPPFLAGS) $(SUBPROJECT_FLAGS)" \
+		-DCMAKE_INSTALL_PREFIX="$(PWD)/deps"
+	cd deps/build/oglplus; $(MAKE) install

@@ -1,6 +1,10 @@
 #include <thread>
 #include <atomic>
 
+#include <epoxy/gl.h>
+
+#include "oglplus/context.hpp"
+
 #include "softwear/thread_pool.hpp"
 
 #include "wrap.hh"
@@ -23,13 +27,14 @@ void draw_thr(shared_state &s) {
   // Window should implicitly create the context
   // and allow it to be used from another thread
   s.w.make_gl_context();
+  oglplus::Context gl;
 
   // TODO: Error handling: is the extension loaded?
   glfwSwapInterval(1);
-  glClearColor(0.0f, 0.0f, 0.1f, 0.0f);
+  gl.ClearColor(0.0f, 0.0f, 0.1f, 0.0f);
 
   while (!s.stop) {
-    glClear(GL_COLOR_BUFFER_BIT);
+    gl.Clear().ColorBuffer();
     s.w.swap_buffers();
 
     // To save CPU we synchronize drawing the frame
@@ -46,7 +51,6 @@ void draw_thr(shared_state &s) {
 void input_thr(shared_state &s) {
   while (!s.stop) {
     glfwWaitEvents();
-    std::cerr << "Got Ev\n";
     s.stop = s.w.should_close();
   }
 }
