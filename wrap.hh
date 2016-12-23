@@ -57,6 +57,9 @@ public:
     glfwWindowHint(GLFW_VISIBLE,   true);
     glfwWindowHint(GLFW_FOCUSED,   true);
     glfwWindowHint(GLFW_MAXIMIZED, true);
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
+    glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
     glfw_window = glfwCreateWindow(w, h, title.c_str(),
                             nullptr, nullptr);
   }

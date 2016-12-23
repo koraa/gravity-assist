@@ -4,6 +4,6 @@
 [submodule "vendor/thread_pool"]
 	path = vendor/thread_pool
 	url = https://github.com/SoftwearDevelopment/thread_pool
-[submodule "vendor/oglplus"]
-	path = vendor/oglplus
-	url = https://github.com/matus-chochlik/oglplus
+[submodule "vendor/glm"]
+	path = vendor/glm
+	url = https://github.com/g-truc/glm/

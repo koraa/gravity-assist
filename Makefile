@@ -1,4 +1,4 @@
-CXX_STANDARD=14
+CXX_STANDARD=1z
 CXXFLAGS += -Wall -Wextra -Wpedantic -Wshadow \
             -O3 -std=c++$(CXX_STANDARD) -flto -pthread
 LDFLAGS += -flto -pthread
@@ -6,6 +6,7 @@ LDFLAGS += -flto -pthread
 CXXFLAGS += \
 	-I"$(PWD)/vendor/phoenix_ptr/include" \
 	-I"$(PWD)/vendor/thread_pool/include" \
+	-I"$(PWD)/vendor/glm/"                \
 	-I"$(PWD)/deps/include"
 
 CXXFLAGS += \
