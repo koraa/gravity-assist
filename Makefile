@@ -1,13 +1,15 @@
 CXX_STANDARD=1z
 CXXFLAGS += -Wall -Wextra -Wpedantic -Wshadow \
-            -O3 -std=c++$(CXX_STANDARD) -flto -pthread
+            -std=c++$(CXX_STANDARD) -pthread \
+						-Ofast -flto
 LDFLAGS += -flto -pthread
 
 CXXFLAGS += \
+	-I"$(PWD)/src"                        \
+	-I"$(PWD)/deps/include"               \
 	-I"$(PWD)/vendor/phoenix_ptr/include" \
 	-I"$(PWD)/vendor/thread_pool/include" \
-	-I"$(PWD)/vendor/glm/"                \
-	-I"$(PWD)/deps/include"
+	-I"$(PWD)/vendor/glm/"
 
 CXXFLAGS += \
 	-DOGLPLUS_LOW_PROFILE=1
@@ -18,12 +20,12 @@ CXXFLAGS += $(shell echo $(pkgs) | tr ' ' '\n' | (echo; xargs -l1 pkg-config --c
 libs += $(shell echo $(pkgs) | tr ' ' '\n' | xargs -l1 pkg-config --libs)
 
 exe = gassist
-objects = $(shell ls *.cc | sed 's@\.cc$$@.o@')
+objects = $(shell find src -iname '*.cc' | sed 's@\.cc$$@.o@')
 
 $(exe): $(objects)
 	$(CXX) $(LDFLAGS) $(libs) $(objects) -o $(exe)
 
-gassist.o wrap.o: wrap.hh
+gassist.o wrap.o: wrap_glfw.hh
 gassist.o: deps/include/oglplus/
 
 .PHONY: clean clean-deps

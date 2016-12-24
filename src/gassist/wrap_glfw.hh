@@ -1,29 +1,28 @@
-/// Provides basic wrappers for c libraries like
-/// glfw or libepoxy
+#pragma once
 
 #include <epoxy/gl.h>
 #include <GLFW/glfw3.h>
 
 #include <softwear/phoenix_ptr.hpp>
 
-namespace gassist::wrap {
+namespace gassist::glfw {
 
 ////////// GLOBAL INITIALIZATION //////////////
 
 namespace intern {
 
-struct wrap_subsystem_t {
-  wrap_subsystem_t() {
+struct glfw_subsystem_t {
+  glfw_subsystem_t() {
     // TODO: Handle error
     glfwInit();
   }
 
-  ~wrap_subsystem_t() {
+  ~glfw_subsystem_t() {
     glfwTerminate();
   }
 };
 
-extern softwear::phoenix_ptr<wrap_subsystem_t> wrap_subsystem;
+extern softwear::phoenix_ptr<glfw_subsystem_t> glfw_subsystem;
 
 } // ns intern
 
@@ -36,8 +35,8 @@ extern softwear::phoenix_ptr<wrap_subsystem_t> wrap_subsystem;
 /// Can be held multiple times in multiple threads.
 /// Thread safe.
 inline auto init()
-    -> decltype(intern::wrap_subsystem.lock()) {
-  return intern::wrap_subsystem.lock();
+    -> decltype(intern::glfw_subsystem.lock()) {
+  return intern::glfw_subsystem.lock();
 }
 
 ////////// WINDOW MANAGEMENT & INIT ///////////
