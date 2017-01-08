@@ -1,8 +1,7 @@
 CXX_STANDARD=1z
 CXXFLAGS += -Wall -Wextra -Wpedantic -Wshadow \
-            -std=c++$(CXX_STANDARD) -pthread \
-						-Ofast -flto
-LDFLAGS += -flto -pthread
+            -std=c++$(CXX_STANDARD) -pthread
+LDFLAGS += -pthread
 
 CXXFLAGS += \
 	-I"$(PWD)/src"                        \
@@ -13,6 +12,15 @@ CXXFLAGS += \
 
 CXXFLAGS += \
 	-DOGLPLUS_LOW_PROFILE=1
+
+ifdef DEBUG
+  CFLAGS += -O0 -g
+  CXXFLAGS += -O0 -g
+else
+  CFLAGS += -Ofast -flto
+  CXXFLAGS += -Ofast -flto
+  LDFLAGS += -flto
+endif
 
 pkgs = glfw3 epoxy
 
