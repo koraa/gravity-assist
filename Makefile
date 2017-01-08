@@ -6,10 +6,10 @@ LDFLAGS += -flto -pthread
 
 CXXFLAGS += \
 	-I"$(PWD)/src"                        \
-	-I"$(PWD)/deps/include"               \
+	-isystem"$(PWD)/deps/include"         \
 	-I"$(PWD)/vendor/phoenix_ptr/include" \
 	-I"$(PWD)/vendor/thread_pool/include" \
-	-I"$(PWD)/vendor/glm/"
+	-isystem"$(PWD)/vendor/glm/"
 
 CXXFLAGS += \
 	-DOGLPLUS_LOW_PROFILE=1
