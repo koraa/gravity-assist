@@ -116,4 +116,4 @@ gl::program load_gl_program(const std::string &dir) {
   return gl::program{frag, vert};
 }
 
-};
+} // ns gassist::asset

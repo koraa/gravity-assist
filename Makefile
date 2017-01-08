@@ -11,7 +11,7 @@ CXXFLAGS += \
 	-isystem"$(PWD)/vendor/glm/"
 
 CXXFLAGS += \
-	-DOGLPLUS_LOW_PROFILE=1
+	-DGLM_FORCE_CXX14=1
 
 ifdef DEBUG
   CFLAGS += -O0 -g

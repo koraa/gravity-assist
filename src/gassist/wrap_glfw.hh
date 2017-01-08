@@ -3,6 +3,8 @@
 #include <epoxy/gl.h>
 #include <GLFW/glfw3.h>
 
+#include <glm/gtc/type_precision.hpp>
+
 #include <softwear/phoenix_ptr.hpp>
 
 namespace gassist::glfw {
@@ -80,6 +82,12 @@ public:
 
   bool should_close() {
     return glfwWindowShouldClose(glfw_window);
+  }
+
+  glm::fvec2 size() {
+    int w, h;
+    glfwGetWindowSize(glfw_window, &w, &h);
+    return {w, h};
   }
 };
 

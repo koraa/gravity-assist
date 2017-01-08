@@ -1,7 +1,13 @@
+#include <cmath>
+
 #include <thread>
 #include <atomic>
 
 #include <epoxy/gl.h>
+
+#include <glm/gtc/type_precision.hpp>
+#include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtc/constants.hpp>
 
 #include <softwear/thread_pool.hpp>
 
@@ -12,22 +18,150 @@
 
 using namespace gassist;
 
+
+// DEFAULT TYPES //////////////
+
+typedef glm::mat4  mat4;
+typedef glm::fvec2 vec2;
+typedef glm::fvec3 vec3;
+typedef glm::fvec4 vec4;
+
+
+// CONSTANTS ///////////////////
+
+const float pi  = glm::pi<float>(),
+            tau = 2*pi;
+mat4 identity{1.0f};
+
+
+// HELPERS /////////////////////
+
+/// Generates a translation matrix based on a vector
+mat4 translate(const vec3 &v) {
+  return glm::translate(identity, v);
+}
+
+/// Generates a rotation transform matrix based on an angle
+/// and a rotation axis
+mat4 rotate(const float angle, const vec3 &axis) {
+  return glm::rotate(identity, angle, axis);
+}
+
+/// Applies a 4d matrix transformation to a 3d vector
+/// (converts the 3d vector to 4d by setting w=1 and
+/// then drops w again)
+vec3 operator*(const mat4 &m, const vec3 &v) {
+  auto r = (m * vec4{v, 1});
+  return {r.x, r.y, r.z};
+}
+
+
+// DATA STRUCTURES //////////////////
+
+/// Position vector (normal Cartesian coordinates)
+///
+/// Specializable template; the default implementation
+/// just uses x.pos()
+///
+/// The return value must support conversion to and
+/// assignment from vec3 (like a vec3&)
+template<typename T>
+vec3& pos(T &x) {
+  return x.pos();
+}
+
+
+/// Orientation; what the object is facing towards
+/// relatively to itself. (e.g. (0, 1, 0) would be
+/// facing upwards)
+///
+/// Specializable template; the default implementation
+/// just uses x.focus().
+///
+/// The return value must support conversion to and
+/// assignment from vec3 (like a vec3&)
+template<typename T>
+vec3& focus(T &x) {
+  return x.focus();
+}
+
+/// How the world is rotated; e.g. focus=(0, 0, -1)
+/// roll=0; would be facing front as normal, while
+/// focus=(0, 0, -1) roll=pi would be facing front
+/// with the camera standing on it's head
+///
+/// Specializable template; the default implementation
+/// just uses x.roll()
+///
+/// The return value must support conversion to and
+/// assignment from float (like a float&)
+template<typename T>
+float& roll(T &x) {
+  return x.roll();
+}
+
+/// Just a simple struct that holds position, focus
+/// and roll of any object
+struct location {
+  vec3 pos_;
+  vec3 focus_;
+  float roll_;
+
+  vec3& pos()   { return pos_; }
+  vec3& focus() { return focus_; }
+  float& roll() { return roll_; }
+};
+
 gl::mesh make_triangle() {
   std::array<float, 9> verts{
     -1, -1, 0,
      1, -1, 0,
-     0,  1, 0};
+     0,  4, 0};
 
   return gl::mesh{verts};
 }
 
 /// Program state that is shared between threads
 struct shared_state {
- /// The window we're drawing in
-  glfw::window w{"Gravity Assist"};
+  //// BASIC VARIABLES ////
+
+  /// The window we're drawing in
+  glfw::window win{"Gravity Assist"};
+
+  /// The size of the window W
+  vec2 win_size{1,1};
+  // NOTE: Storing this in the state and loading it in
+  // the input thread because we don't know what kind of
+  // performance input this has.
+  // NOTE: We should move this to a store in glfw::window
+  // and update via events, but the glfw events are not
+  // very convenient (won't allow passing the address of
+  // the c++ wrapper to the callback)
+  // NOTE: Initializing not to zero in order to avoid
+  // division by zero errors on start
+
+  /// Indicates to the drawing thread that a resize of the
+  /// viewport is necessary
+  std::atomic<bool> opengl_needs_resize{false};
+  // TODO: Later we should introduce a signaling queue with
+  // signals indicating those kinds of events
 
   /// Set to false to stop the program
   std::atomic<bool> stop{false};
+
+  //// WORLD STATE ////
+
+  /// Where the camera is at
+  location cam{
+    {0,  10,  8},
+    {0, -10, -8},
+    0
+  };
+
+  //// SETTINGS ////
+
+  // y axis field of view in degrees
+  float fov = 110;
 };
 
 ////////////// DRAWING ///////////////////////
@@ -36,23 +170,62 @@ void draw_thr(shared_state &s) {
   // We should have something nicer for this.
   // Window should implicitly create the context
   // and allow it to be used from another thread
-  s.w.make_gl_context();
+  std::cerr << "pi=" << pi << " fov=" << s.fov
+    << " wx=" << s.win_size.x << " wy=" << s.win_size.y
+    << std::endl;
+  s.win.make_gl_context();
 
   gl::program default_prog = asset::load_gl_program("default_prog");
+  // TODO: We need a generic, compile time soluition
+  // for representing shader parameters
+  GLint param_mvp = glGetUniformLocation(default_prog.id(), "mvp");
+
   gl::mesh tri = make_triangle();
 
   // TODO: Error handling: is the extension loaded?
   glfwSwapInterval(1);
   glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
 
+  mat4 vp; // View-projection matrix
+
+  auto draw = [&](auto &obj, const vec3 &pos) {
+    // TODO: We need a more generic way of expressing this
+    mat4 mvp = vp * translate(pos);
+    glUniformMatrix4fv(param_mvp, 1, GL_FALSE, &mvp[0][0]);
+    obj.draw();
+  };
+
+  default_prog.use();
   while (!s.stop) {
-    //glClear(GL_COLOR_BUFFER_BIT);
+    // Make a snapshot of the state
+    // (just in case it changes concurrently)
+    location cam = s.cam;
 
-    gl::with_program(default_prog, [&](){
-        gl::draw(tri);
-    });
+    // Adjust the view/projection matrix to accomodate
+    // position, fov and window size updates.
+    // TODO: Use the roll component of the vector
+    mat4 persp = glm::perspective(
+                          tau*s.fov/360,
+                          s.win_size.x / s.win_size.y,
+                          0.01f, 1000.0f);
+    vec3 up = rotate(roll(cam), vec3{0, 0, -1})
+            * vec3{0, 1, 0};
+    mat4 look = glm::lookAt(pos(cam),
+                            pos(cam) + focus(cam),
+                            up);
+    vp = persp * look;
 
-    s.w.swap_buffers();
+    if (s.opengl_needs_resize) {
+      glViewport(0, 0, (int)s.win_size.x, (int)s.win_size.y);
+      glScissor(0, 0, (int)s.win_size.x, (int)s.win_size.y);
+      s.opengl_needs_resize = false;
+    }
+
+    glClear(GL_COLOR_BUFFER_BIT);
+
+    draw(tri, {0, 0, 0});
+
+    s.win.swap_buffers();
 
     // To save CPU we synchronize drawing the frame
     // with the Frame rate. This saves some CPU for
@@ -66,9 +239,52 @@ void draw_thr(shared_state &s) {
 // NOTE: This necessarily must be placed in the
 // main thread
 void input_thr(shared_state &s) {
+  // TODO: This code is not very pretty
+  glm::tvec2<double> mousepos, mouse_lastpos, mouse_delta;
+
+
   while (!s.stop) {
     glfwWaitEvents();
-    s.stop = s.w.should_close();
+
+    {
+      auto nu_size = s.win.size();
+      if (nu_size != s.win_size)
+        s.opengl_needs_resize = true;
+      s.win_size = nu_size;
+    }
+
+    bool mousel = glfwGetMouseButton(s.win.glfw_window, GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS,
+         mousem = glfwGetMouseButton(s.win.glfw_window, GLFW_MOUSE_BUTTON_MIDDLE) == GLFW_PRESS,
+         shift  = glfwGetKey(s.win.glfw_window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS;
+
+    mouse_lastpos = mousepos;
+    glfwGetCursorPos(s.win.glfw_window, &mousepos.x, &mousepos.y);
+    mouse_delta = mousepos - mouse_lastpos;
+
+    //// WINDOW CLOSED ////
+    s.stop = s.win.should_close();
+
+    //// CAMERA NAVIGATION ////
+
+    if (mousem || (mousel && shift)) { // zoom
+      float mag = mouse_delta.y - mouse_delta.x;
+      pos(s.cam) *= std::pow(10, mag/500);
+
+    } else if (mousel) {
+      auto alt_axis =
+          rotate(90, vec3{0, 1, 0})
+        * glm::normalize(pos(s.cam) * vec3{1, 0, 1});
+
+      // TODO: Not locking here. This seems a bit dangerous,
+      // but apparently works
+
+      pos(s.cam) = rotate(-mouse_delta.x/40, {0, 1, 0})
+                 * rotate(-mouse_delta.y/40, alt_axis)
+                 * pos(s.cam);
+
+      // Note: We're orbiting around 0, 0, 0
+      focus(s.cam) = vec3{0, 0, 0} - pos(s.cam);
+    }
   }
 }
 

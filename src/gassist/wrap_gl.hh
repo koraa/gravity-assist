@@ -7,6 +7,8 @@
 
 #include <epoxy/gl.h>
 
+#include <glm/gtc/type_precision.hpp>
+
 #include "gassist/exception.hh"
 
 namespace gassist::gl {
@@ -20,6 +22,8 @@ class shader {
   GLuint _id;
 
 public:
+  
+  GLuint param_mvp;
   shader(const GLenum type, const char *s, size_t len)
       : _type{type}, _id{glCreateShader(_type)} {
     int _len = len; // TODO: Check overflow
@@ -98,6 +102,7 @@ shader make_fragment_shader(Args&&... args) {
 /// should be handled by wrapper classes.
 class program {
   GLuint _id = glCreateProgram();
+  GLuint param_mvp_id;
 
   template<typename R>
   void from_range(const R &shaders) {
@@ -123,7 +128,6 @@ class program {
       glDeleteProgram(id());
 
       throw msg_exception{msg.str()};
-
     }
   }
 public:
@@ -142,7 +146,7 @@ public:
 
   GLuint id() const { return _id; }
 
-  void _use() {
+  void use() {
     glUseProgram(id());
   }
 
@@ -159,14 +163,6 @@ public:
     std::swap(_id, otr._id);
   }
 };
-
-/// Uses a program while the lambda F is executing
-/// Essentially a wrapper for glUseProgram
-template<typename T, typename F>
-void with_program(T &p, F f) {
-  p._use();
-  f();
-}
 
 /// Basic wrapper for a 3d mesh/model.
 /// Takes a range of vertices and takes care of uploading
@@ -200,7 +196,7 @@ public:
   }
 
   /// Draws this mesh. You should probably use draw() instead
-  void _draw() {
+  void draw() {
 		glEnableVertexAttribArray(0);
 		glBindBuffer(GL_ARRAY_BUFFER, id_vertex_buffer);
 		glVertexAttribPointer(
@@ -218,12 +214,5 @@ public:
 		glDisableVertexAttribArray(0);
   }
 };
-
-/// Function that can draw any kind of object.
-/// This really just forwards to the argument._draw()
-template<typename T>
-void draw(T &o) {
-  o._draw();
-}
 
 } // ns gassist::gl
