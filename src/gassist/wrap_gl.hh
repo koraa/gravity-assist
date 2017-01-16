@@ -175,8 +175,8 @@ class mesh {
   size_t no_vertices;
 
 public:
-  template<typename R>
-  mesh(const R &vertices) noexcept {
+  template<size_t VertNo>
+  mesh(std::array<vec3, VertNo> &vertices) noexcept {
 	  glGenVertexArrays(1, &id_vertex_array);
     glBindVertexArray(id_vertex_array);
 
@@ -184,9 +184,9 @@ public:
     glBindBuffer(GL_ARRAY_BUFFER, id_vertex_buffer);
 
     // NOTE: Assuming this is contiguous
-    no_vertices = vertices.size() / 3;
+    no_vertices = vertices.size();
     glBufferData(GL_ARRAY_BUFFER,
-                 vertices.size()*sizeof(typename R::value_type),
+                 vertices.size()*sizeof(vec3),
                  vertices.begin(), GL_STATIC_DRAW);
   }
 

@@ -16,16 +16,20 @@
 
 using namespace gassist;
 
-gl::mesh make_triangle() {
-  std::array<float, 18> verts{
-    +1, +1, 0,
-    +1, -1, 0,
-    -1, +1, 0,
-    +1, -1, 0,
-    -1, +1, 0,
-    -1, -1, 0};
+// TODO: Use ranges/iterators
+std::array<vec3, 3> tri_verts(vec3 a, vec3 b, vec3 c) {
+  return {a, b, c};
+}
 
-  return gl::mesh{verts};
+std::array<vec3, 3*2> quad_verts(vec3 a, vec3 b, vec3 c, vec3 d) {
+  return {a, b, c,   b, c, d};
+}
+
+gl::mesh make_rectangle() {
+  auto front = quad_verts(
+    {+1, +1, 0}, {+1, -1, 0}, {-1, +1, 0}, {-1, -1, 0});
+
+  return gl::mesh{front};
 }
 
 /// Program state that is shared between threads
@@ -84,7 +88,7 @@ void draw_thr(shared_state &s) {
   // for representing shader parameters
   GLint param_mvp = glGetUniformLocation(default_prog.id(), "mvp");
 
-  gl::mesh tri = make_triangle();
+  gl::mesh tri = make_rectangle();
 
   // TODO: Error handling: is the extension loaded?
   glfwSwapInterval(1);
