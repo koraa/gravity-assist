@@ -17,10 +17,13 @@
 using namespace gassist;
 
 gl::mesh make_triangle() {
-  std::array<float, 9> verts{
-    -1, -1, -1,
-    -1, -1, +1,
-    -1, +1, +1};
+  std::array<float, 18> verts{
+    +1, +1, 0,
+    +1, -1, 0,
+    -1, +1, 0,
+    +1, -1, 0,
+    -1, +1, 0,
+    -1, -1, 0};
 
   return gl::mesh{verts};
 }

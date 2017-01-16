@@ -201,7 +201,7 @@ public:
 		glBindBuffer(GL_ARRAY_BUFFER, id_vertex_buffer);
 		glVertexAttribPointer(
 			0,                  // attribute 0. No particular reason for 0, but must match the layout in the shader.
-			no_vertices,        // size
+			3,                  // size
 			GL_FLOAT,           // type
 			GL_FALSE,           // normalized?
 			0,                  // stride
