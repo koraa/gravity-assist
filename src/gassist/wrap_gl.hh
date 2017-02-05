@@ -176,7 +176,7 @@ class mesh {
 
 public:
   template<size_t VertNo>
-  mesh(std::array<vec3, VertNo> &vertices) noexcept {
+  mesh(const std::array<vec3, VertNo> &vertices) noexcept {
 	  glGenVertexArrays(1, &id_vertex_array);
     glBindVertexArray(id_vertex_array);
 
@@ -187,7 +187,7 @@ public:
     no_vertices = vertices.size();
     glBufferData(GL_ARRAY_BUFFER,
                  vertices.size()*sizeof(vec3),
-                 vertices.begin(), GL_STATIC_DRAW);
+                 vertices.data(), GL_STATIC_DRAW);
   }
 
   ~mesh() {

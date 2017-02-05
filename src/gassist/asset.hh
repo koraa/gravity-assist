@@ -2,12 +2,15 @@
 
 #include <utility>
 #include <string>
+#include <algorithm>
 
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <sys/mman.h>
 #include <fcntl.h>
 #include <unistd.h>
+
+#include "webp/decode.h"
 
 #include "gassist/exception.hh"
 #include "gassist/util.hh"
@@ -39,9 +42,9 @@ public:
   open_fd(const open_fd&) = delete;
   open_fd& operator =(const open_fd&otr) = delete;
 
-  open_fd(open_fd&& otr) { std::swap(*this, otr); }
+  open_fd(open_fd&& otr) { swap(otr); }
   open_fd& operator=(open_fd&& otr) {
-    std::swap(*this, otr);
+    swap(otr);
     return *this;
   }
 
@@ -115,5 +118,83 @@ gl::program load_gl_program(const std::string &dir) {
 
   return gl::program{frag, vert};
 }
+
+class cubemap {
+  GLuint id;
+
+  struct mapped_webp_file : mapped_file {
+    typedef mapped_file super;
+    int w, h;
+
+    using super::super;
+
+    mapped_webp_file(const std::string &p) : super{p} {
+      // TODO: Error handling
+      WebPGetInfo(data(), size(), &w, &h);
+    }
+
+    uint8_t *data() noexcept {
+      mapped_file *sup = this;
+      return (uint8_t*)sup->data();
+    }
+  };
+public:
+  cubemap(const std::string &basepath) noexcept {
+    glGenTextures(1, &id);
+    glActiveTexture(GL_TEXTURE0);
+
+    use();
+
+    {
+      std::array<mapped_webp_file, 6> disk_texes {
+        basepath + "/right.webp", basepath + "/left.webp",
+        basepath + "/top.webp",   basepath + "/bottom.webp",
+        basepath + "/back.webp", basepath + "/front.webp"};
+
+      size_t bufsize = 0;
+      for (auto &t : disk_texes)
+        bufsize = std::max<size_t>(bufsize, t.w*t.h*3);
+
+      std::vector<uint8_t> texbuf;
+      texbuf.resize(bufsize);
+
+      for (size_t i=0; i < disk_texes.size(); i++) {
+        auto &t = disk_texes[i];
+        WebPDecodeRGBInto(t.data(), t.size(),
+            texbuf.data(), texbuf.size(), t.w*3);
+        glTexImage2D(
+            // Adding the counter here is bad style
+            GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0,
+            GL_RGB, t.w, t.h, 0, GL_RGB, GL_UNSIGNED_BYTE,
+            texbuf.data());
+
+        // Optimization: Close the memory mapping right now,
+        // possibly freeing some memory
+        t = {empty};
+      }
+    }
+
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+
+    // TODO: Texture compression
+    // TODO: Mipmapping
+
+    glBindTexture(GL_TEXTURE_CUBE_MAP, id);
+  }
+
+  ~cubemap() {
+    glDeleteTextures(1, &id);
+  }
+
+  void use() {
+    glBindTexture(GL_TEXTURE_CUBE_MAP, id);
+  }
+
+  GLuint texid() const noexcept { return id; }
+};
 
 } // ns gassist::asset

@@ -17,20 +17,16 @@
 using namespace gassist;
 
 // TODO: Use ranges/iterators
-std::array<vec3, 3> tri_verts(vec3 a, vec3 b, vec3 c) {
-  return {a, b, c};
+std::array<vec3, 3*2*6> __cube_verts() {
+  vec3 a={1,1, 1}, b={-1,1, 1}, c={-1,-1, 1}, d={1,-1, 1},
+       e={1,1,-1}, f={-1,1,-1}, g={-1,-1,-1}, h={1,-1,-1};
+  return {a,b,c, a,c,d,  e,f,g, e,g,h,  // front back
+          a,d,e, d,e,h,  b,c,f, c,f,g,  // right left
+          a,b,e, b,e,f,  c,d,g, d,g,h}; // top   bottom
 }
 
-std::array<vec3, 3*2> quad_verts(vec3 a, vec3 b, vec3 c, vec3 d) {
-  return {a, b, c,   b, c, d};
-}
+const auto cube_verts = __cube_verts();
 
-gl::mesh make_rectangle() {
-  auto front = quad_verts(
-    {+1, +1, 0}, {+1, -1, 0}, {-1, +1, 0}, {-1, -1, 0});
-
-  return gl::mesh{front};
-}
 
 /// Program state that is shared between threads
 struct shared_state {
@@ -83,12 +79,17 @@ void draw_thr(shared_state &s) {
   // and allow it to be used from another thread
   s.win.make_gl_context();
 
-  gl::program default_prog = asset::load_gl_program("default_prog");
+  // TODO: Depth buffer
+
+
+  gl::program default_prog = asset::load_gl_program("shaders/roundcube");
+  asset::cubemap skybox{"assets/poods_milky_way"};
+
   // TODO: We need a generic, compile time soluition
   // for representing shader parameters
   GLint param_mvp = glGetUniformLocation(default_prog.id(), "mvp");
 
-  gl::mesh tri = make_rectangle();
+  gl::mesh cube{cube_verts};
 
   // TODO: Error handling: is the extension loaded?
   glfwSwapInterval(1);
@@ -103,7 +104,9 @@ void draw_thr(shared_state &s) {
     obj.draw();
   };
 
-  default_prog.use();
+  auto use = [](auto &obj) { return obj.use(); };
+
+  use(default_prog);
   while (!s.stop) {
     // Make a snapshot of the state
     // (just in case it changes concurrently)
@@ -131,7 +134,9 @@ void draw_thr(shared_state &s) {
 
     glClear(GL_COLOR_BUFFER_BIT);
 
-    draw(tri, {0, 0, 0});
+    // Skybox
+    use(skybox);
+    draw(cube, pos(cam));
 
     s.win.swap_buffers();
 
