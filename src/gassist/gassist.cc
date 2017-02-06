@@ -80,10 +80,12 @@ void draw_thr(shared_state &s) {
   s.win.make_gl_context();
 
   // TODO: Depth buffer
+  glEnable(GL_DEPTH_TEST);
 
 
   gl::program default_prog = asset::load_gl_program("shaders/roundcube");
   asset::cubemap skybox{"assets/poods_milky_way"};
+  asset::cubemap blue_marble{"assets/blue_marble"};
 
   // TODO: We need a generic, compile time soluition
   // for representing shader parameters
@@ -132,11 +134,17 @@ void draw_thr(shared_state &s) {
       s.opengl_needs_resize = false;
     }
 
-    glClear(GL_COLOR_BUFFER_BIT);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
     // Skybox
+    glDepthMask(GL_FALSE);
     use(skybox);
     draw(cube, pos(cam));
+    glDepthMask(GL_TRUE);
+
+    // Spheres
+    use(blue_marble);
+    draw(cube, vec3{0, 0, 0});
 
     s.win.swap_buffers();
 
