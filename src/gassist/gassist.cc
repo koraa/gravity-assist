@@ -147,9 +147,9 @@ void draw_thr(shared_state &s) {
 
   mat4 vp; // View-projection matrix
 
-  auto draw = [&](auto &obj, const vec3 &pos) {
+  auto draw = [&](auto &obj, const mat4 &m) {
     // TODO: We need a more generic way of expressing this
-    mat4 mvp = vp * translate(pos);
+    mat4 mvp = vp * m;
     glUniformMatrix4fv(param_mvp, 1, GL_FALSE, &mvp[0][0]);
     obj.draw();
   };
@@ -187,12 +187,14 @@ void draw_thr(shared_state &s) {
     // Skybox
     glDepthMask(GL_FALSE);
     use(skybox);
-    draw(cube, pos(cam));
+    draw(cube, translate(pos(cam)));
     glDepthMask(GL_TRUE);
 
     // Spheres
     use(blue_marble);
-    draw(sphere, vec3{0, 0, 0});
+    draw(sphere, translate(0, 0, 0));
+    draw(sphere, translate(4, 4, 0)
+               * scale(2, 8, 4));
 
     s.win.swap_buffers();
 

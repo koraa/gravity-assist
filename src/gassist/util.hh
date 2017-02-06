@@ -41,6 +41,18 @@ mat4 translate(const vec3 &v) {
   return glm::translate(identity, v);
 }
 
+mat4 translate(float x, float y, float z) {
+  return translate(vec3(x, y, z));
+}
+
+mat4 scale(const vec3 &v) {
+  return glm::scale(identity, v);
+}
+
+mat4 scale(float x, float y, float z) {
+  return scale(vec3(x, y, z));
+}
+
 /// Generates a rotation transform matrix based on an angle
 /// and a rotation axis
 mat4 rotate(const fl angle, const vec3 &axis) {
