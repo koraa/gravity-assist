@@ -16,6 +16,48 @@
 
 using namespace gassist;
 
+float lininterp(float a, float b, float fac) {
+  return a + (b-a)*fac;
+}
+
+vec3 lininterp(const vec3 &a, const vec3 &b, float fac) {
+  return {lininterp(a.x, b.x, fac),
+          lininterp(a.y, b.y, fac),
+          lininterp(a.z, b.z, fac)};
+}
+
+template<typename OutItr>
+void linsubdivide_face_(const vec3 &a, const vec3 &b, const vec3 &c,
+                        uint lv, OutItr &out) {
+  if (lv == 0) {
+    *out = a; ++out;
+    *out = b; ++out;
+    *out = c; ++out;
+    return;
+  }
+
+  uint lk = lv-1;
+  auto d = lininterp(a, b, 0.5f),
+       e = lininterp(a, c, 0.5f),
+       f = lininterp(b, c, 0.5f);
+
+  linsubdivide_face_(a, d, e, lk, out);
+  linsubdivide_face_(b, d, f, lk, out);
+  linsubdivide_face_(c, e, f, lk, out);
+  linsubdivide_face_(d, e, f, lk, out);
+}
+
+template<typename Cont>
+std::vector<vec3> linsubdivide(const Cont &c, uint lv) {
+  std::vector<vec3> out;
+  out.resize(c.size()*(uint)std::pow(4, lv));
+  auto out_itr = out.begin();
+  for (size_t i=0; i<c.size(); i+=3)
+    linsubdivide_face_(c[i], c[i+1], c[i+2], lv, out_itr);
+  return out;
+}
+
+
 // TODO: Use ranges/iterators
 std::array<vec3, 3*2*6> __cube_verts() {
   vec3 a={1,1, 1}, b={-1,1, 1}, c={-1,-1, 1}, d={1,-1, 1},
@@ -24,9 +66,14 @@ std::array<vec3, 3*2*6> __cube_verts() {
           a,d,e, d,e,h,  b,c,f, c,f,g,  // right left
           a,b,e, b,e,f,  c,d,g, d,g,h}; // top   bottom
 }
-
 const auto cube_verts = __cube_verts();
 
+std::vector<vec3> __sphere_verts(uint lv) {
+  std::vector<vec3> out = linsubdivide(cube_verts, lv);
+  for (auto &v : out)
+    v = glm::normalize(v);
+  return out;
+}
 
 /// Program state that is shared between threads
 struct shared_state {
@@ -92,6 +139,7 @@ void draw_thr(shared_state &s) {
   GLint param_mvp = glGetUniformLocation(default_prog.id(), "mvp");
 
   gl::mesh cube{cube_verts};
+  gl::mesh sphere{__sphere_verts(5)};
 
   // TODO: Error handling: is the extension loaded?
   glfwSwapInterval(1);
@@ -144,7 +192,7 @@ void draw_thr(shared_state &s) {
 
     // Spheres
     use(blue_marble);
-    draw(cube, vec3{0, 0, 0});
+    draw(sphere, vec3{0, 0, 0});
 
     s.win.swap_buffers();
 

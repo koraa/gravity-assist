@@ -8,6 +8,8 @@ namespace gassist {
 
 // DEFAULT TYPES //////////////
 
+typedef unsigned int uint;
+
 /// Our default floating point type; we would use float
 /// but we want to (sort of) keep configurable
 typedef float fl;

@@ -175,8 +175,8 @@ class mesh {
   size_t no_vertices;
 
 public:
-  template<size_t VertNo>
-  mesh(const std::array<vec3, VertNo> &vertices) noexcept {
+  template<typename VertCont>
+  mesh(const VertCont &vertices) noexcept {
 	  glGenVertexArrays(1, &id_vertex_array);
     glBindVertexArray(id_vertex_array);
 
